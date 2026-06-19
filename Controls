@@ -1,0 +1,707 @@
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
+local uniqueKey = "Script_" .. tostring(math.random(100000, 999999)) .. "_" .. tostring(tick())
+
+if getgenv()[uniqueKey] then return end
+getgenv()[uniqueKey] = true
+
+local players = game:GetService("Players")
+local localPlayer = players.LocalPlayer
+
+if not localPlayer then
+    players:GetPropertyChangedSignal("LocalPlayer"):Wait()
+    localPlayer = players.LocalPlayer
+end
+
+local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+
+if workspace.CurrentCamera == nil then return end
+
+
+
+
+
+local plr = game.Players.LocalPlayer
+local rs = game:GetService("RunService")
+local uis = game:GetService("UserInputService")
+local stats = game:GetService("Stats")
+
+if not uis.TouchEnabled then return end
+
+local bct = 0.22
+local bbt = 0.28
+local ct = bct
+local bt = bbt
+local wjc = 0.3
+local wjd = 5
+local wtw = 1.2
+
+local sping = 0
+local phist = {}
+local mph = 10
+
+local lgt = 0
+local ljpt = 0
+local ljtt = 0
+local jtc = 0
+local wjct = 0
+local wju = false
+local ijh = false
+local ljrt = 0
+
+local cconn = {}
+local syson = true
+local caani = false
+local cauto = false
+
+local function getPing()
+	local ping = stats.Network.ServerStatsItem["Data Ping"]:GetValueString()
+	local pingNum = ping:match("%d+%.?%d*")
+	return tonumber(pingNum) or 0
+end
+
+local function gethm()
+	local ch = plr.Character
+	if ch then return ch:FindFirstChildOfClass("Humanoid") end
+	return nil
+end
+
+local function isnwl()
+	local ch = plr.Character
+	if not ch then return false end
+	local hm = ch:FindFirstChildOfClass("Humanoid")
+	local hrp = ch:FindFirstChild("HumanoidRootPart")
+	if not hm or not hrp then return false end
+	if hm.FloorMaterial ~= Enum.Material.Air then return false end
+
+	local prm = RaycastParams.new()
+	prm.FilterDescendantsInstances = {ch}
+	prm.FilterType = Enum.RaycastFilterType.Exclude
+
+	local cam = workspace.CurrentCamera
+	local ldir = cam and cam.CFrame.LookVector or hrp.CFrame.LookVector
+	local rdir = cam and cam.CFrame.RightVector or hrp.CFrame.RightVector
+	local udir = Vector3.new(0, 1, 0)
+
+	local dirs = {
+		ldir,
+		-ldir,
+		rdir,
+		-rdir,
+		(ldir + rdir).Unit,
+		(ldir - rdir).Unit,
+	}
+
+	local offs = {
+		Vector3.new(0, 0, 0),
+		udir * 1,
+		-udir * 0.5,
+	}
+
+	for _, d in ipairs(dirs) do
+		for _, o in ipairs(offs) do
+			local org = hrp.Position + o
+			local res = workspace:Raycast(org, d * wjd, prm)
+			if res and res.Instance and res.Instance.CanCollide then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+if plr.PlayerGui:FindFirstChild("BlackDynamicJoystick") then
+	plr.PlayerGui.BlackDynamicJoystick:Destroy()
+end
+
+if plr.PlayerGui:FindFirstChild("BlackDynamicJoystickCapture") then
+	plr.PlayerGui.BlackDynamicJoystickCapture:Destroy()
+end
+
+local sgui = Instance.new("ScreenGui")
+sgui.Name = "BlackDynamicJoystick"
+sgui.Parent = plr:WaitForChild("PlayerGui")
+sgui.ResetOnSpawn = false
+sgui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+sgui.DisplayOrder = 99999
+sgui.Enabled = true
+
+local cgui = Instance.new("ScreenGui")
+cgui.Name = "BlackDynamicJoystickCapture"
+cgui.Parent = plr:WaitForChild("PlayerGui")
+cgui.ResetOnSpawn = false
+cgui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+cgui.DisplayOrder = -99999
+cgui.IgnoreGuiInset = false
+cgui.Enabled = syson
+
+local carea = Instance.new("Frame", cgui)
+carea.Name = "CaptureArea"
+carea.Size = UDim2.new(0.5, 0, 1, 0)
+carea.Position = UDim2.new(0, 0, 0, 0)
+carea.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+carea.BackgroundTransparency = 1
+carea.Active = true
+carea.ZIndex = 1
+
+local base = Instance.new("ImageLabel", sgui)
+base.Name = "CustomBase"
+base.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+base.BackgroundTransparency = 0.85
+base.Size = UDim2.new(0, 40, 0, 40)
+base.Visible = false
+base.ZIndex = 99991
+Instance.new("UICorner", base).CornerRadius = UDim.new(1, 0)
+
+local dots = {}
+for i = 1, 6 do
+	local dt = Instance.new("ImageLabel", sgui)
+	dt.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	dt.BackgroundTransparency = 0.95 - (i * 0.05)
+	dt.Size = UDim2.new(0, 6 + (i * 2), 0, 6 + (i * 2))
+	dt.Visible = false
+	dt.ZIndex = 99991
+	Instance.new("UICorner", dt).CornerRadius = UDim.new(1, 0)
+	table.insert(dots, dt)
+end
+
+local stick = Instance.new("ImageButton", sgui)
+stick.Name = "CustomStick"
+stick.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+stick.BackgroundTransparency = 0.5
+stick.Size = UDim2.new(0, 45, 0, 45)
+stick.Visible = false
+stick.ZIndex = 99992
+Instance.new("UICorner", stick).CornerRadius = UDim.new(1, 0)
+
+local jbtn = Instance.new("ImageButton", sgui)
+jbtn.Name = "CustomJumpButton"
+jbtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+jbtn.BackgroundTransparency = 0.5
+jbtn.Position = UDim2.new(1, -95, 1, -95)
+jbtn.Size = UDim2.new(0, 70, 0, 70)
+jbtn.ZIndex = 99992
+jbtn.Image = "rbxassetid://87742153266987"
+Instance.new("UICorner", jbtn).CornerRadius = UDim.new(1, 0)
+
+local drag = false
+local inpo = nil
+local mvec = Vector3.new(0, 0, 0)
+local spos = Vector2.new(0, 0)
+local monce = false
+
+local function enableCustom()
+	syson = true
+	cgui.Enabled = true
+	jbtn.Visible = true
+	pcall(function()
+		local tgui = plr.PlayerGui:FindFirstChild("TouchGui")
+		if tgui then
+			tgui.Enabled = false
+		end
+	end)
+end
+
+local function enableDefault()
+	syson = false
+	cgui.Enabled = false
+	jbtn.Visible = true
+	drag = false
+	monce = false
+	inpo = nil
+	base.Visible = false
+	stick.Visible = false
+	for _, d in pairs(dots) do d.Visible = false end
+	mvec = Vector3.new(0, 0, 0)
+	pcall(function()
+		local tgui = plr.PlayerGui:FindFirstChild("TouchGui")
+		if tgui then
+			tgui.Enabled = true
+			local frm = tgui:FindFirstChild("TouchControlFrame")
+			if frm then
+				frm.Visible = true
+				local stk = frm:FindFirstChild("DynamicThumbstick")
+				if stk then stk.Visible = true end
+			end
+		end
+	end)
+end
+
+local function dconn()
+	for _, c in ipairs(cconn) do
+		if c and c.Connected then
+			c:Disconnect()
+		end
+	end
+	cconn = {}
+end
+
+local function isVehicleSeat()
+	local ch = plr.Character
+	if not ch then return false end
+	local hm = ch:FindFirstChildOfClass("Humanoid")
+	if not hm then return false end
+	if hm.Sit then
+		local sp = hm.SeatPart
+		if sp and sp:IsA("VehicleSeat") then
+			return true
+		end
+	end
+	return false
+end
+
+local function updst()
+	local hm = gethm()
+	if not hm then return end
+	if hm.PlatformStand then
+		enableDefault()
+	elseif hm.Sit and isVehicleSeat() then
+		enableDefault()
+	else
+		enableCustom()
+	end
+end
+
+local function findTouchFrame()
+	local tgui = plr.PlayerGui:FindFirstChild("TouchGui")
+	if not tgui then return nil end
+	local frm = tgui:FindFirstChild("TouchControlFrame")
+	return frm
+end
+
+local function findThumbstickFrame(frm)
+	if not frm then return nil end
+	local dthm = frm:FindFirstChild("DynamicThumbstickFrame")
+	if dthm then return dthm end
+	local stk = frm:FindFirstChild("DynamicThumbstick")
+	if stk then
+		local p = stk.Parent
+		if p and p ~= frm then return p end
+		return stk
+	end
+	return nil
+end
+
+local function findJumpButton(frm)
+	if not frm then return nil end
+	return frm:FindFirstChild("JumpButton")
+end
+
+local function syncRects()
+	local frm = findTouchFrame()
+	if not frm then return end
+
+	local dthm = findThumbstickFrame(frm)
+	if dthm then
+		local pos = dthm.Position
+		local sz = dthm.Size
+		carea.Size = sz
+		carea.Position = pos
+	end
+
+	local njmp = findJumpButton(frm)
+	if njmp then
+		local pos = njmp.Position
+		local sz = njmp.Size
+		jbtn.Position = pos
+		jbtn.Size = sz
+	end
+end
+
+local function setup(ch)
+	dconn()
+	lgt = 0
+	ljpt = 0
+	ljtt = 0
+	jtc = 0
+	wjct = 0
+	wju = false
+	ijh = false
+
+	local hm = ch:WaitForChild("Humanoid", 5)
+	if not hm then return end
+
+	updst()
+	local cs = hm:GetPropertyChangedSignal("Sit"):Connect(function()
+		local hm2 = gethm()
+		if not hm2 then return end
+		if hm2.PlatformStand then
+			enableDefault()
+		elseif hm2.Sit and isVehicleSeat() then
+			enableDefault()
+		else
+			enableCustom()
+			if drag and monce then
+				base.Visible = true
+				stick.Visible = true
+				for _, d in pairs(dots) do d.Visible = true end
+			end
+		end
+	end)
+	local cp = hm:GetPropertyChangedSignal("PlatformStand"):Connect(updst)
+	table.insert(cconn, cs)
+	table.insert(cconn, cp)
+
+	local function handleLanding()
+		jtc = 0
+		wju = false
+		if tick() - ljpt <= bt then
+			ljpt = 0
+			task.defer(function()
+				if hm and hm:GetState() ~= Enum.HumanoidStateType.Jumping then
+					ljrt = tick()
+					hm:ChangeState(Enum.HumanoidStateType.Jumping)
+				end
+			end)
+		end
+	end
+
+	local c2 = hm.StateChanged:Connect(function(o, n)
+		if n == Enum.HumanoidStateType.Freefall then
+			if tick() - ljrt > 0.25 then
+				lgt = tick()
+			end
+		end
+
+		if n == Enum.HumanoidStateType.Landed or n == Enum.HumanoidStateType.Running or n == Enum.HumanoidStateType.RunningNoPhysics then
+			handleLanding()
+		end
+	end)
+	table.insert(cconn, c2)
+
+	local c3 = hm:GetPropertyChangedSignal("FloorMaterial"):Connect(function()
+		if hm.FloorMaterial == Enum.Material.Air then
+			if tick() - ljrt > 0.25 then
+				lgt = tick()
+			end
+		else
+			handleLanding()
+		end
+	end)
+	table.insert(cconn, c3)
+
+	task.spawn(function()
+		while true do
+			if plr.Character ~= ch then break end
+			local found = false
+			pcall(function()
+				local tgui = plr.PlayerGui:FindFirstChild("TouchGui")
+				if tgui then
+					local frm = tgui:FindFirstChild("TouchControlFrame")
+					if frm then
+						local dthm = findThumbstickFrame(frm)
+						if dthm then
+							table.insert(cconn, dthm:GetPropertyChangedSignal("Position"):Connect(syncRects))
+							table.insert(cconn, dthm:GetPropertyChangedSignal("Size"):Connect(syncRects))
+						end
+						local njmp = findJumpButton(frm)
+						if njmp then
+							table.insert(cconn, njmp:GetPropertyChangedSignal("Position"):Connect(syncRects))
+							table.insert(cconn, njmp:GetPropertyChangedSignal("Size"):Connect(syncRects))
+							table.insert(cconn, njmp:GetPropertyChangedSignal("Visible"):Connect(function()
+								if njmp.Visible then njmp.Visible = false end
+							end))
+							njmp.Visible = false
+						end
+
+						local stk = frm:FindFirstChild("DynamicThumbstick")
+						if stk then
+							table.insert(cconn, stk:GetPropertyChangedSignal("Visible"):Connect(function()
+								if not syson and not stk.Visible then
+									stk.Visible = true
+								end
+							end))
+						end
+
+						table.insert(cconn, tgui:GetPropertyChangedSignal("Enabled"):Connect(function()
+							if syson and tgui.Enabled then
+								tgui.Enabled = false
+							elseif not syson and not tgui.Enabled then
+								tgui.Enabled = true
+							end
+						end))
+						tgui.Enabled = not syson
+
+						syncRects()
+						found = true
+					end
+				end
+			end)
+			if found then break end
+			task.wait(0.1)
+		end
+	end)
+
+	task.spawn(function()
+		while true do
+			task.wait(0.2)
+			if plr.Character ~= ch then break end
+			local hm2 = ch:FindFirstChildOfClass("Humanoid")
+			if hm2 then
+				if hm2.PlatformStand then
+					if syson then
+						enableDefault()
+					end
+				elseif hm2.Sit and isVehicleSeat() then
+					if syson then
+						enableDefault()
+					end
+				else
+					if not syson then
+						enableCustom()
+					end
+				end
+			end
+		end
+	end)
+end
+
+local function ecv()
+	if not sgui or not sgui.Parent then return end
+	sgui.Enabled = true
+	cgui.Enabled = syson
+	jbtn.Visible = true
+end
+
+if plr.Character then
+	setup(plr.Character)
+end
+
+plr.CharacterAdded:Connect(function(ch)
+	jtc = 0
+	lgt = 0
+	ljpt = 0
+	ljtt = 0
+	wjct = 0
+	wju = false
+	ijh = false
+	ljrt = 0
+	sping = 0
+	phist = {}
+
+	task.wait(0.1)
+	setup(ch)
+	task.wait(0.2)
+	ecv()
+end)
+
+rs.RenderStepped:Connect(function()
+	if syson then
+		syncRects()
+		local ch = plr.Character
+		if ch then
+			local hm = ch:FindFirstChild("Humanoid")
+			if hm then
+				hm:Move(mvec, true)
+			end
+		end
+	end
+end)
+
+task.spawn(function()
+	if syson then
+		ecv()
+	end
+end)
+
+task.spawn(function()
+	task.wait(0.1)
+	caani = true
+	carea.BackgroundTransparency = 0.5
+	local elap = 0
+	local dur = 1.5
+	while elap < dur do
+		if not caani then
+			carea.BackgroundTransparency = 1
+			return
+		end
+		elap = elap + task.wait()
+	end
+	if not caani then
+		carea.BackgroundTransparency = 1
+		return
+	end
+	local felap = 0
+	local fdur = 0.6
+	local st = 0.5
+	local et = 1
+	while felap < fdur do
+		if not caani then
+			carea.BackgroundTransparency = 1
+			return
+		end
+		local dt = task.wait()
+		felap = felap + dt
+		local al = math.clamp(felap / fdur, 0, 1)
+		carea.BackgroundTransparency = st + (et - st) * al
+	end
+	carea.BackgroundTransparency = 1
+	caani = false
+end)
+
+local function hjr()
+	local hm = gethm()
+	if not hm then return end
+
+	if hm.Sit then
+		hm.Sit = false
+		hm.Jump = true
+		ljrt = tick()
+		task.defer(function()
+			if hm then hm:ChangeState(Enum.HumanoidStateType.Jumping) end
+		end)
+		return
+	end
+
+	local t = tick()
+	local st = hm:GetState()
+	local ina = (hm.FloorMaterial == Enum.Material.Air)
+	local cok = (t - lgt <= ct) and (lgt > 0)
+
+	if st == Enum.HumanoidStateType.Climbing then
+		hm:ChangeState(Enum.HumanoidStateType.Jumping)
+		return
+	end
+
+	if not ina or cok then
+		lgt = 0
+		ljrt = tick()
+		hm:ChangeState(Enum.HumanoidStateType.Jumping)
+		return
+	end
+
+	if ina then
+		local tslt = t - ljtt
+		if tslt < wtw then
+			jtc = jtc + 1
+		else
+			jtc = 1
+		end
+		ljtt = t
+
+		if jtc >= 2 and t > wjct and not wju then
+			if isnwl() then
+				jtc = 0
+				wju = true
+				wjct = t + wjc
+				ljrt = tick()
+				hm:ChangeState(Enum.HumanoidStateType.Jumping)
+				return
+			end
+		end
+		ljpt = t
+	end
+end
+
+jbtn.MouseButton1Down:Connect(function()
+	jbtn.BackgroundTransparency = 0.3
+	jbtn.ImageColor3 = Color3.fromRGB(180, 180, 180)
+	ijh = true
+	hjr()
+
+	task.spawn(function()
+		task.wait(0.2)
+		while ijh do
+			local hm = gethm()
+			if hm and hm.FloorMaterial ~= Enum.Material.Air and not hm.Sit then
+				ljrt = tick()
+				hm:ChangeState(Enum.HumanoidStateType.Jumping)
+			end
+			task.wait(0.05)
+		end
+	end)
+end)
+
+jbtn.MouseButton1Up:Connect(function()
+	jbtn.BackgroundTransparency = 0.5
+	jbtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
+	ijh = false
+end)
+
+jbtn.MouseLeave:Connect(function()
+	jbtn.BackgroundTransparency = 0.5
+	jbtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
+	ijh = false
+end)
+
+local function ujv(cpos, df)
+	stick.Position = UDim2.new(0, cpos.X - 22.5, 0, cpos.Y - 22.5)
+	for i, dt in ipairs(dots) do
+		local rt = i / 7
+		local dpos = spos + (df * rt)
+		dt.Position = UDim2.new(0, dpos.X - (dt.Size.X.Offset / 2), 0, dpos.Y - (dt.Size.Y.Offset / 2))
+	end
+
+	local dst = df.Magnitude
+	local dr = dst > 0 and df.Unit or Vector2.new(0, 0)
+	local int = math.clamp(dst / 40, 0, 1)
+	mvec = Vector3.new(dr.X * int, 0, dr.Y * int)
+end
+
+carea.InputBegan:Connect(function(inp)
+	if not syson or drag then return end
+	if inp.UserInputType ~= Enum.UserInputType.Touch and inp.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+
+	if caani then
+		caani = false
+		carea.BackgroundTransparency = 1
+	end
+
+	drag = true
+	monce = false
+	inpo = inp
+	spos = Vector2.new(inp.Position.X, inp.Position.Y)
+end)
+
+uis.InputChanged:Connect(function(inp)
+	if syson and drag and inp == inpo then
+		local cpos = Vector2.new(inp.Position.X, inp.Position.Y)
+		local df = cpos - spos
+
+		if not monce and df.Magnitude > 10 then
+			monce = true
+			base.Position = UDim2.new(0, spos.X - 20, 0, spos.Y - 20)
+			base.Visible = true
+			stick.Visible = true
+			for _, d in pairs(dots) do d.Visible = true end
+		end
+		if monce then ujv(cpos, df) end
+	end
+end)
+
+uis.InputEnded:Connect(function(inp)
+	if inp == inpo then
+		drag = false
+		monce = false
+		inpo = nil
+		base.Visible = false
+		stick.Visible = false
+		for _, d in pairs(dots) do d.Visible = false end
+		mvec = Vector3.new(0, 0, 0)
+	end
+end)
+
+rs.Heartbeat:Connect(function(dt)
+	local rpng = getPing()
+
+	table.insert(phist, rpng)
+	if #phist > mph then
+		table.remove(phist, 1)
+	end
+	
+	local psum = 0
+	for _, v in ipairs(phist) do
+		psum += v
+	end
+	local apng = psum / #phist
+
+	sping = sping + (apng - sping) * 0.1
+
+	local pingSec = sping / 1000
+	ct = bct + (pingSec * 1.2)
+	bt = bbt + (pingSec * 1.5)
+end)
