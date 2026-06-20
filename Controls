@@ -21,10 +21,6 @@ local rootPart = character:WaitForChild("HumanoidRootPart")
 
 if workspace.CurrentCamera == nil then return end
 
-
-
-
-
 local plr = game.Players.LocalPlayer
 local rs = game:GetService("RunService")
 local uis = game:GetService("UserInputService")
@@ -52,6 +48,10 @@ local wjct = 0
 local wju = false
 local ijh = false
 local ljrt = 0
+
+local atk = 0
+local lvy = 0
+local isfl = false
 
 local cconn = {}
 local syson = true
@@ -257,7 +257,7 @@ end
 local function updst()
 	local hm = gethm()
 	if not hm then return end
-	if hm.PlatformStand then
+	if isfl then
 		enableDefault()
 	elseif hm.Sit and isVehicleSeat() then
 		enableDefault()
@@ -329,7 +329,7 @@ local function setup(ch)
 	local cs = hm:GetPropertyChangedSignal("Sit"):Connect(function()
 		local hm2 = gethm()
 		if not hm2 then return end
-		if hm2.PlatformStand then
+		if isfl then
 			enableDefault()
 		elseif hm2.Sit and isVehicleSeat() then
 			enableDefault()
@@ -342,9 +342,7 @@ local function setup(ch)
 			end
 		end
 	end)
-	local cp = hm:GetPropertyChangedSignal("PlatformStand"):Connect(updst)
 	table.insert(cconn, cs)
-	table.insert(cconn, cp)
 
 	local function handleLanding()
 		jtc = 0
@@ -442,7 +440,7 @@ local function setup(ch)
 			if plr.Character ~= ch then break end
 			local hm2 = ch:FindFirstChildOfClass("Humanoid")
 			if hm2 then
-				if hm2.PlatformStand then
+				if isfl then
 					if syson then
 						enableDefault()
 					end
@@ -482,6 +480,9 @@ plr.CharacterAdded:Connect(function(ch)
 	ljrt = 0
 	sping = 0
 	phist = {}
+	atk = 0
+	lvy = 0
+	isfl = false
 
 	task.wait(0.1)
 	setup(ch)
@@ -704,4 +705,49 @@ rs.Heartbeat:Connect(function(dt)
 	local pingSec = sping / 1000
 	ct = bct + (pingSec * 1.2)
 	bt = bbt + (pingSec * 1.5)
+
+	local ch = plr.Character
+	if not ch then
+		atk = 0
+		isfl = false
+		return
+	end
+	local hrp = ch:FindFirstChild("HumanoidRootPart")
+	local hm = ch:FindFirstChildOfClass("Humanoid")
+	if not hrp or not hm then
+		atk = 0
+		isfl = false
+		return
+	end
+
+	local pfl = isfl
+
+	if hm.FloorMaterial == Enum.Material.Air then
+		local hst = hm:GetState()
+		if hst ~= Enum.HumanoidStateType.Climbing and hst ~= Enum.HumanoidStateType.Swimming and hst ~= Enum.HumanoidStateType.Seated then
+			local cvy = hrp.AssemblyLinearVelocity.Y
+			if cvy >= lvy - 0.1 then
+				atk = atk + 1
+			else
+				atk = math.max(0, atk - 1)
+			end
+			if atk > 60 then
+				isfl = true
+				atk = 0
+			end
+			lvy = cvy
+		else
+			atk = 0
+			isfl = false
+			lvy = hrp.AssemblyLinearVelocity.Y
+		end
+	else
+		atk = 0
+		isfl = false
+		lvy = hrp.AssemblyLinearVelocity.Y
+	end
+
+	if pfl ~= isfl then
+		updst()
+	end
 end)
