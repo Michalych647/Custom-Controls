@@ -2,29 +2,28 @@ if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
-local uniqueKey = "Script_" .. tostring(math.random(100000, 999999)) .. "_" .. tostring(tick())
+local ukey = "Script_" .. tostring(math.random(100000, 999999)) .. "_" .. tostring(tick())
 
-if getgenv()[uniqueKey] then return end
-getgenv()[uniqueKey] = true
+if getgenv()[ukey] then return end
+getgenv()[ukey] = true
 
-local players = game:GetService("Players")
-local localPlayer = players.LocalPlayer
+local plrs = game:GetService("Players")
+local plr = plrs.LocalPlayer
 
-if not localPlayer then
-    players:GetPropertyChangedSignal("LocalPlayer"):Wait()
-    localPlayer = players.LocalPlayer
+if not plr then
+    plrs:GetPropertyChangedSignal("LocalPlayer"):Wait()
+    plr = plrs.LocalPlayer
 end
 
-local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
-local rootPart = character:WaitForChild("HumanoidRootPart")
+local ch0 = plr.Character or plr.CharacterAdded:Wait()
+local hm0 = ch0:WaitForChild("Humanoid")
+local hrp0 = ch0:WaitForChild("HumanoidRootPart")
 
 if workspace.CurrentCamera == nil then return end
 
-local plr = game.Players.LocalPlayer
 local rs = game:GetService("RunService")
 local uis = game:GetService("UserInputService")
-local stats = game:GetService("Stats")
+local stat = game:GetService("Stats")
 
 if not uis.TouchEnabled then return end
 
@@ -36,8 +35,8 @@ local wjc = 0.3
 local wjd = 5
 local wtw = 1.2
 
-local sping = 0
-local phist = {}
+local spng = 0
+local phis = {}
 local mph = 10
 
 local lgt = 0
@@ -51,20 +50,19 @@ local ljrt = 0
 
 local atk = 0
 local lvy = 0
-local isfl = false
 
-local cconn = {}
+local ccon = {}
 local syson = true
-local caani = false
-local cauto = false
+local caan = false
+local caut = false
 
-local function getPing()
-	local ping = stats.Network.ServerStatsItem["Data Ping"]:GetValueString()
-	local pingNum = ping:match("%d+%.?%d*")
-	return tonumber(pingNum) or 0
+local function gpng()
+	local ping = stat.Network.ServerStatsItem["Data Ping"]:GetValueString()
+	local pn = ping:match("%d+%.?%d*")
+	return tonumber(pn) or 0
 end
 
-local function gethm()
+local function gthm()
 	local ch = plr.Character
 	if ch then return ch:FindFirstChildOfClass("Humanoid") end
 	return nil
@@ -139,14 +137,14 @@ cgui.DisplayOrder = -99999
 cgui.IgnoreGuiInset = false
 cgui.Enabled = syson
 
-local carea = Instance.new("Frame", cgui)
-carea.Name = "CaptureArea"
-carea.Size = UDim2.new(0.5, 0, 1, 0)
-carea.Position = UDim2.new(0, 0, 0, 0)
-carea.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-carea.BackgroundTransparency = 1
-carea.Active = true
-carea.ZIndex = 1
+local care = Instance.new("Frame", cgui)
+care.Name = "CaptureArea"
+care.Size = UDim2.new(0.5, 0, 1, 0)
+care.Position = UDim2.new(0, 0, 0, 0)
+care.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+care.BackgroundTransparency = 1
+care.Active = true
+care.ZIndex = 1
 
 local base = Instance.new("ImageLabel", sgui)
 base.Name = "CustomBase"
@@ -169,14 +167,14 @@ for i = 1, 6 do
 	table.insert(dots, dt)
 end
 
-local stick = Instance.new("ImageButton", sgui)
-stick.Name = "CustomStick"
-stick.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-stick.BackgroundTransparency = 0.5
-stick.Size = UDim2.new(0, 45, 0, 45)
-stick.Visible = false
-stick.ZIndex = 99992
-Instance.new("UICorner", stick).CornerRadius = UDim.new(1, 0)
+local stck = Instance.new("ImageButton", sgui)
+stck.Name = "CustomStick"
+stck.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+stck.BackgroundTransparency = 0.5
+stck.Size = UDim2.new(0, 45, 0, 45)
+stck.Visible = false
+stck.ZIndex = 99992
+Instance.new("UICorner", stck).CornerRadius = UDim.new(1, 0)
 
 local jbtn = Instance.new("ImageButton", sgui)
 jbtn.Name = "CustomJumpButton"
@@ -192,9 +190,9 @@ local drag = false
 local inpo = nil
 local mvec = Vector3.new(0, 0, 0)
 local spos = Vector2.new(0, 0)
-local monce = false
+local monc = false
 
-local function enableCustom()
+local function encst()
 	syson = true
 	cgui.Enabled = true
 	jbtn.Visible = true
@@ -206,15 +204,15 @@ local function enableCustom()
 	end)
 end
 
-local function enableDefault()
+local function endft()
 	syson = false
 	cgui.Enabled = false
 	jbtn.Visible = true
 	drag = false
-	monce = false
+	monc = false
 	inpo = nil
 	base.Visible = false
-	stick.Visible = false
+	stck.Visible = false
 	for _, d in pairs(dots) do d.Visible = false end
 	mvec = Vector3.new(0, 0, 0)
 	pcall(function()
@@ -231,16 +229,16 @@ local function enableDefault()
 	end)
 end
 
-local function dconn()
-	for _, c in ipairs(cconn) do
+local function dcon()
+	for _, c in ipairs(ccon) do
 		if c and c.Connected then
 			c:Disconnect()
 		end
 	end
-	cconn = {}
+	ccon = {}
 end
 
-local function isVehicleSeat()
+local function isvst()
 	local ch = plr.Character
 	if not ch then return false end
 	local hm = ch:FindFirstChildOfClass("Humanoid")
@@ -255,25 +253,23 @@ local function isVehicleSeat()
 end
 
 local function updst()
-	local hm = gethm()
+	local hm = gthm()
 	if not hm then return end
-	if isfl then
-		enableDefault()
-	elseif hm.Sit and isVehicleSeat() then
-		enableDefault()
+	if hm.Sit and isvst() then
+		endft()
 	else
-		enableCustom()
+		encst()
 	end
 end
 
-local function findTouchFrame()
+local function ftfr()
 	local tgui = plr.PlayerGui:FindFirstChild("TouchGui")
 	if not tgui then return nil end
 	local frm = tgui:FindFirstChild("TouchControlFrame")
 	return frm
 end
 
-local function findThumbstickFrame(frm)
+local function fttf(frm)
 	if not frm then return nil end
 	local dthm = frm:FindFirstChild("DynamicThumbstickFrame")
 	if dthm then return dthm end
@@ -286,24 +282,24 @@ local function findThumbstickFrame(frm)
 	return nil
 end
 
-local function findJumpButton(frm)
+local function ftjb(frm)
 	if not frm then return nil end
 	return frm:FindFirstChild("JumpButton")
 end
 
-local function syncRects()
-	local frm = findTouchFrame()
+local function synrc()
+	local frm = ftfr()
 	if not frm then return end
 
-	local dthm = findThumbstickFrame(frm)
+	local dthm = fttf(frm)
 	if dthm then
 		local pos = dthm.Position
 		local sz = dthm.Size
-		carea.Size = sz
-		carea.Position = pos
+		care.Size = sz
+		care.Position = pos
 	end
 
-	local njmp = findJumpButton(frm)
+	local njmp = ftjb(frm)
 	if njmp then
 		local pos = njmp.Position
 		local sz = njmp.Size
@@ -313,7 +309,7 @@ local function syncRects()
 end
 
 local function setup(ch)
-	dconn()
+	dcon()
 	lgt = 0
 	ljpt = 0
 	ljtt = 0
@@ -327,24 +323,22 @@ local function setup(ch)
 
 	updst()
 	local cs = hm:GetPropertyChangedSignal("Sit"):Connect(function()
-		local hm2 = gethm()
+		local hm2 = gthm()
 		if not hm2 then return end
-		if isfl then
-			enableDefault()
-		elseif hm2.Sit and isVehicleSeat() then
-			enableDefault()
+		if hm2.Sit and isvst() then
+			endft()
 		else
-			enableCustom()
-			if drag and monce then
+			encst()
+			if drag and monc then
 				base.Visible = true
-				stick.Visible = true
+				stck.Visible = true
 				for _, d in pairs(dots) do d.Visible = true end
 			end
 		end
 	end)
-	table.insert(cconn, cs)
+	table.insert(ccon, cs)
 
-	local function handleLanding()
+	local function hland()
 		jtc = 0
 		wju = false
 		if tick() - ljpt <= bt then
@@ -366,10 +360,10 @@ local function setup(ch)
 		end
 
 		if n == Enum.HumanoidStateType.Landed or n == Enum.HumanoidStateType.Running or n == Enum.HumanoidStateType.RunningNoPhysics then
-			handleLanding()
+			hland()
 		end
 	end)
-	table.insert(cconn, c2)
+	table.insert(ccon, c2)
 
 	local c3 = hm:GetPropertyChangedSignal("FloorMaterial"):Connect(function()
 		if hm.FloorMaterial == Enum.Material.Air then
@@ -377,30 +371,30 @@ local function setup(ch)
 				lgt = tick()
 			end
 		else
-			handleLanding()
+			hland()
 		end
 	end)
-	table.insert(cconn, c3)
+	table.insert(ccon, c3)
 
 	task.spawn(function()
 		while true do
 			if plr.Character ~= ch then break end
-			local found = false
+			local fnd = false
 			pcall(function()
 				local tgui = plr.PlayerGui:FindFirstChild("TouchGui")
 				if tgui then
 					local frm = tgui:FindFirstChild("TouchControlFrame")
 					if frm then
-						local dthm = findThumbstickFrame(frm)
+						local dthm = fttf(frm)
 						if dthm then
-							table.insert(cconn, dthm:GetPropertyChangedSignal("Position"):Connect(syncRects))
-							table.insert(cconn, dthm:GetPropertyChangedSignal("Size"):Connect(syncRects))
+							table.insert(ccon, dthm:GetPropertyChangedSignal("Position"):Connect(synrc))
+							table.insert(ccon, dthm:GetPropertyChangedSignal("Size"):Connect(synrc))
 						end
-						local njmp = findJumpButton(frm)
+						local njmp = ftjb(frm)
 						if njmp then
-							table.insert(cconn, njmp:GetPropertyChangedSignal("Position"):Connect(syncRects))
-							table.insert(cconn, njmp:GetPropertyChangedSignal("Size"):Connect(syncRects))
-							table.insert(cconn, njmp:GetPropertyChangedSignal("Visible"):Connect(function()
+							table.insert(ccon, njmp:GetPropertyChangedSignal("Position"):Connect(synrc))
+							table.insert(ccon, njmp:GetPropertyChangedSignal("Size"):Connect(synrc))
+							table.insert(ccon, njmp:GetPropertyChangedSignal("Visible"):Connect(function()
 								if njmp.Visible then njmp.Visible = false end
 							end))
 							njmp.Visible = false
@@ -408,14 +402,14 @@ local function setup(ch)
 
 						local stk = frm:FindFirstChild("DynamicThumbstick")
 						if stk then
-							table.insert(cconn, stk:GetPropertyChangedSignal("Visible"):Connect(function()
+							table.insert(ccon, stk:GetPropertyChangedSignal("Visible"):Connect(function()
 								if not syson and not stk.Visible then
 									stk.Visible = true
 								end
 							end))
 						end
 
-						table.insert(cconn, tgui:GetPropertyChangedSignal("Enabled"):Connect(function()
+						table.insert(ccon, tgui:GetPropertyChangedSignal("Enabled"):Connect(function()
 							if syson and tgui.Enabled then
 								tgui.Enabled = false
 							elseif not syson and not tgui.Enabled then
@@ -424,12 +418,12 @@ local function setup(ch)
 						end))
 						tgui.Enabled = not syson
 
-						syncRects()
-						found = true
+						synrc()
+						fnd = true
 					end
 				end
 			end)
-			if found then break end
+			if fnd then break end
 			task.wait(0.1)
 		end
 	end)
@@ -440,17 +434,13 @@ local function setup(ch)
 			if plr.Character ~= ch then break end
 			local hm2 = ch:FindFirstChildOfClass("Humanoid")
 			if hm2 then
-				if isfl then
+				if hm2.Sit and isvst() then
 					if syson then
-						enableDefault()
-					end
-				elseif hm2.Sit and isVehicleSeat() then
-					if syson then
-						enableDefault()
+						endft()
 					end
 				else
 					if not syson then
-						enableCustom()
+						encst()
 					end
 				end
 			end
@@ -465,6 +455,19 @@ local function ecv()
 	jbtn.Visible = true
 end
 
+task.spawn(function()
+	local pmod = require(plr:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"))
+	local ctrl = pmod:GetControls()
+	local ogmv = ctrl.GetMoveVector
+
+	ctrl.GetMoveVector = function(self, ...)
+		if syson then
+			return mvec
+		end
+		return ogmv(self, ...)
+	end
+end)
+
 if plr.Character then
 	setup(plr.Character)
 end
@@ -478,11 +481,10 @@ plr.CharacterAdded:Connect(function(ch)
 	wju = false
 	ijh = false
 	ljrt = 0
-	sping = 0
-	phist = {}
+	spng = 0
+	phis = {}
 	atk = 0
 	lvy = 0
-	isfl = false
 
 	task.wait(0.1)
 	setup(ch)
@@ -492,7 +494,7 @@ end)
 
 rs.RenderStepped:Connect(function()
 	if syson then
-		syncRects()
+		synrc()
 		local ch = plr.Character
 		if ch then
 			local hm = ch:FindFirstChild("Humanoid")
@@ -511,41 +513,41 @@ end)
 
 task.spawn(function()
 	task.wait(0.1)
-	caani = true
-	carea.BackgroundTransparency = 0.5
+	caan = true
+	care.BackgroundTransparency = 0.5
 	local elap = 0
 	local dur = 1.5
 	while elap < dur do
-		if not caani then
-			carea.BackgroundTransparency = 1
+		if not caan then
+			care.BackgroundTransparency = 1
 			return
 		end
 		elap = elap + task.wait()
 	end
-	if not caani then
-		carea.BackgroundTransparency = 1
+	if not caan then
+		care.BackgroundTransparency = 1
 		return
 	end
-	local felap = 0
+	local felp = 0
 	local fdur = 0.6
 	local st = 0.5
 	local et = 1
-	while felap < fdur do
-		if not caani then
-			carea.BackgroundTransparency = 1
+	while felp < fdur do
+		if not caan then
+			care.BackgroundTransparency = 1
 			return
 		end
 		local dt = task.wait()
-		felap = felap + dt
-		local al = math.clamp(felap / fdur, 0, 1)
-		carea.BackgroundTransparency = st + (et - st) * al
+		felp = felp + dt
+		local al = math.clamp(felp / fdur, 0, 1)
+		care.BackgroundTransparency = st + (et - st) * al
 	end
-	carea.BackgroundTransparency = 1
-	caani = false
+	care.BackgroundTransparency = 1
+	caan = false
 end)
 
 local function hjr()
-	local hm = gethm()
+	local hm = gthm()
 	if not hm then return end
 
 	if hm.Sit then
@@ -607,7 +609,7 @@ jbtn.MouseButton1Down:Connect(function()
 	task.spawn(function()
 		task.wait(0.2)
 		while ijh do
-			local hm = gethm()
+			local hm = gthm()
 			if hm and hm.FloorMaterial ~= Enum.Material.Air and not hm.Sit then
 				ljrt = tick()
 				hm:ChangeState(Enum.HumanoidStateType.Jumping)
@@ -630,7 +632,7 @@ jbtn.MouseLeave:Connect(function()
 end)
 
 local function ujv(cpos, df)
-	stick.Position = UDim2.new(0, cpos.X - 22.5, 0, cpos.Y - 22.5)
+	stck.Position = UDim2.new(0, cpos.X - 22.5, 0, cpos.Y - 22.5)
 	for i, dt in ipairs(dots) do
 		local rt = i / 7
 		local dpos = spos + (df * rt)
@@ -643,17 +645,17 @@ local function ujv(cpos, df)
 	mvec = Vector3.new(dr.X * int, 0, dr.Y * int)
 end
 
-carea.InputBegan:Connect(function(inp)
+care.InputBegan:Connect(function(inp)
 	if not syson or drag then return end
 	if inp.UserInputType ~= Enum.UserInputType.Touch and inp.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
 
-	if caani then
-		caani = false
-		carea.BackgroundTransparency = 1
+	if caan then
+		caan = false
+		care.BackgroundTransparency = 1
 	end
 
 	drag = true
-	monce = false
+	monc = false
 	inpo = inp
 	spos = Vector2.new(inp.Position.X, inp.Position.Y)
 end)
@@ -663,91 +665,58 @@ uis.InputChanged:Connect(function(inp)
 		local cpos = Vector2.new(inp.Position.X, inp.Position.Y)
 		local df = cpos - spos
 
-		if not monce and df.Magnitude > 10 then
-			monce = true
+		if not monc and df.Magnitude > 10 then
+			monc = true
 			base.Position = UDim2.new(0, spos.X - 20, 0, spos.Y - 20)
 			base.Visible = true
-			stick.Visible = true
+			stck.Visible = true
 			for _, d in pairs(dots) do d.Visible = true end
 		end
-		if monce then ujv(cpos, df) end
+		if monc then ujv(cpos, df) end
 	end
 end)
 
 uis.InputEnded:Connect(function(inp)
 	if inp == inpo then
 		drag = false
-		monce = false
+		monc = false
 		inpo = nil
 		base.Visible = false
-		stick.Visible = false
+		stck.Visible = false
 		for _, d in pairs(dots) do d.Visible = false end
 		mvec = Vector3.new(0, 0, 0)
 	end
 end)
 
 rs.Heartbeat:Connect(function(dt)
-	local rpng = getPing()
+	local rpng = gpng()
 
-	table.insert(phist, rpng)
-	if #phist > mph then
-		table.remove(phist, 1)
+	table.insert(phis, rpng)
+	if #phis > mph then
+		table.remove(phis, 1)
 	end
-	
+
 	local psum = 0
-	for _, v in ipairs(phist) do
+	for _, v in ipairs(phis) do
 		psum += v
 	end
-	local apng = psum / #phist
+	local apng = psum / #phis
 
-	sping = sping + (apng - sping) * 0.1
+	spng = spng + (apng - spng) * 0.1
 
-	local pingSec = sping / 1000
-	ct = bct + (pingSec * 1.2)
-	bt = bbt + (pingSec * 1.5)
+	local psec = spng / 1000
+	ct = bct + (psec * 1.2)
+	bt = bbt + (psec * 1.5)
 
 	local ch = plr.Character
 	if not ch then
 		atk = 0
-		isfl = false
 		return
 	end
 	local hrp = ch:FindFirstChild("HumanoidRootPart")
 	local hm = ch:FindFirstChildOfClass("Humanoid")
 	if not hrp or not hm then
 		atk = 0
-		isfl = false
 		return
-	end
-
-	local pfl = isfl
-
-	if hm.FloorMaterial == Enum.Material.Air then
-		local hst = hm:GetState()
-		if hst ~= Enum.HumanoidStateType.Climbing and hst ~= Enum.HumanoidStateType.Swimming and hst ~= Enum.HumanoidStateType.Seated then
-			local cvy = hrp.AssemblyLinearVelocity.Y
-			if cvy >= lvy - 0.1 then
-				atk = atk + 1
-			else
-				atk = math.max(0, atk - 1)
-			end
-			if atk > 60 then
-				isfl = true
-				atk = 0
-			end
-			lvy = cvy
-		else
-			atk = 0
-			isfl = false
-			lvy = hrp.AssemblyLinearVelocity.Y
-		end
-	else
-		atk = 0
-		isfl = false
-		lvy = hrp.AssemblyLinearVelocity.Y
-	end
-
-	if pfl ~= isfl then
-		updst()
 	end
 end)
