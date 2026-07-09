@@ -1,39 +1,22 @@
--- change the shit mobile controls
+-- enjoy the code
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
-
-local uis = game:GetService("UserInputService")
-
-if uis.TouchEnabled and not uis.MouseEnabled and not uis.KeyboardEnabled then
-	print("mobile user")
-else
-	return
-end
-
-
-
-
-local scriptKey = "Script_" .. tostring(math.random(100000, 999999)) .. "_" .. tostring(tick())
-
-if getgenv()[scriptKey] then return end
-getgenv()[scriptKey] = true
-
 local players = game:GetService("Players")
 local player = players.LocalPlayer
-
-if not player then
-    players:GetPropertyChangedSignal("LocalPlayer"):Wait()
-    player = players.LocalPlayer
-end
-
-local char = player.Character or player.CharacterAdded:Wait()
 local runSvc = game:GetService("RunService")
 local inputSvc = game:GetService("UserInputService")
 local stats = game:GetService("Stats")
 
-if workspace.CurrentCamera == nil or not inputSvc.TouchEnabled then return end
+if not inputSvc.TouchEnabled then
+    return
+end
+
+local scriptKey = "CustomMobControls"
+
+if getgenv()[scriptKey] then return end
+getgenv()[scriptKey] = true
 
 local baseCoyote = 0.22
 local baseBuffer = 0.28
@@ -48,6 +31,7 @@ local lastGrounded = 0
 local lastJumpPress = 0
 local lastJumpReq = 0
 local isHoldingJump = false
+local isSwim = false
 
 local charConns = {}
 local sysEnabled = true
@@ -85,10 +69,10 @@ local capGui = Instance.new("ScreenGui")
 capGui.Name = "BlackDynamicJoystickCapture"
 capGui.Parent = player:WaitForChild("PlayerGui")
 capGui.ResetOnSpawn = false
-capGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-capGui.DisplayOrder = -99999
-capGui.IgnoreGuiInset = false
-capGui.Enabled = sysEnabled
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+gui.DisplayOrder = -99999
+gui.IgnoreGuiInset = false
+gui.Enabled = sysEnabled
 
 local capArea = Instance.new("Frame", capGui)
 capArea.Name = "CaptureArea"
@@ -131,13 +115,13 @@ Instance.new("UICorner", stick).CornerRadius = UDim.new(1, 0)
 
 local jumpBtn = Instance.new("ImageButton", gui)
 jumpBtn.Name = "CustomJumpButton"
-jumpBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-jumpBtn.BackgroundTransparency = 0.5
+jumpBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+jumpBtn.BackgroundTransparency = 1
 jumpBtn.Position = UDim2.new(1, -95, 1, -95)
 jumpBtn.Size = UDim2.new(0, 70, 0, 70)
 jumpBtn.ZIndex = 99992
-jumpBtn.Image = "rbxassetid://87742153266987"
-Instance.new("UICorner", jumpBtn).CornerRadius = UDim.new(1, 0)
+jumpBtn.Image = "rbxassetid://120976481677763"
+jumpBtn.AutoButtonColor = false
 
 local isDrag = false
 local dragInput = nil
@@ -260,6 +244,7 @@ local function setupCharacter(c)
     lastJumpPress = 0
     lastJumpReq = 0
     isHoldingJump = false
+    isSwim = false
 
     local hum = c:WaitForChild("Humanoid", 5)
     if not hum then return end
@@ -295,6 +280,7 @@ local function setupCharacter(c)
     end
 
     local stateConn = hum.StateChanged:Connect(function(old, new)
+        isSwim = (new == Enum.HumanoidStateType.Swimming)
         if new == Enum.HumanoidStateType.Freefall then
             if tick() - lastJumpReq > 0.25 then
                 lastGrounded = tick()
@@ -419,6 +405,7 @@ player.CharacterAdded:Connect(function(c)
     lastJumpReq = 0
     smoothPing = 0
     pingHist = {}
+    isSwim = false
 
     task.wait(0.1)
     setupCharacter(c)
@@ -432,7 +419,12 @@ runSvc.RenderStepped:Connect(function()
         local c = player.Character
         if c then
             local h = c:FindFirstChild("Humanoid")
-            if h then h:Move(moveVec, true) end
+            if h then
+                if isSwim and isHoldingJump then
+                    h.Jump = true
+                end
+                h:Move(moveVec, true)
+            end
         end
     end
 end)
@@ -474,6 +466,11 @@ local function reqJump()
     local hum = getHum()
     if not hum then return end
 
+    if isSwim then
+        hum.Jump = true
+        return
+    end
+
     if hum.Sit then
         hum.Sit = false
         hum.Jump = true
@@ -507,8 +504,7 @@ local function reqJump()
 end
 
 jumpBtn.MouseButton1Down:Connect(function()
-    jumpBtn.BackgroundTransparency = 0.3
-    jumpBtn.ImageColor3 = Color3.fromRGB(180, 180, 180)
+    jumpBtn.Image = "rbxassetid://102963053930832"
     isHoldingJump = true
     reqJump()
 
@@ -516,9 +512,11 @@ jumpBtn.MouseButton1Down:Connect(function()
         task.wait(0.2)
         while isHoldingJump do
             local hum = getHum()
-            if hum and hum.FloorMaterial ~= Enum.Material.Air and not hum.Sit then
-                lastJumpReq = tick()
-                hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            if not isSwim then
+                if hum and hum.FloorMaterial ~= Enum.Material.Air and not hum.Sit then
+                    lastJumpReq = tick()
+                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                end
             end
             task.wait(0.05)
         end
@@ -526,14 +524,12 @@ jumpBtn.MouseButton1Down:Connect(function()
 end)
 
 jumpBtn.MouseButton1Up:Connect(function()
-    jumpBtn.BackgroundTransparency = 0.5
-    jumpBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    jumpBtn.Image = "rbxassetid://120976481677763"
     isHoldingJump = false
 end)
 
 jumpBtn.MouseLeave:Connect(function()
-    jumpBtn.BackgroundTransparency = 0.5
-    jumpBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    jumpBtn.Image = "rbxassetid://120976481677763"
     isHoldingJump = false
 end)
 
@@ -589,11 +585,10 @@ end)
 inputSvc.WindowFocusReleased:Connect(function()
     resetJoystick()
     isHoldingJump = false
-    jumpBtn.BackgroundTransparency = 0.5
-    jumpBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    jumpBtn.Image = "rbxassetid://120976481677763"
 end)
 
-runSvc.Heartbeat:Connect(function()
+runSvc.Stepped:Connect(function()
     local curPing = getPing()
 
     table.insert(pingHist, curPing)
