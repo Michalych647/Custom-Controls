@@ -70,9 +70,9 @@ capGui.Name = "BlackDynamicJoystickCapture"
 capGui.Parent = player:WaitForChild("PlayerGui")
 capGui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-gui.DisplayOrder = -99999
-gui.IgnoreGuiInset = false
-gui.Enabled = sysEnabled
+capGui.DisplayOrder = -99999
+capGui.IgnoreGuiInset = false
+capGui.Enabled = sysEnabled
 
 local capArea = Instance.new("Frame", capGui)
 capArea.Name = "CaptureArea"
