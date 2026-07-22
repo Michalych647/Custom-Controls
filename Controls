@@ -1,6 +1,16 @@
 -- enjoy the code
 if not game:IsLoaded() then
-    game.Loaded:Wait()
+    local loadedEvent = game.Loaded
+    loadedEvent:Wait()
+end
+
+local Players = game:GetService("Players")
+local localPlayer = Players.LocalPlayer
+local playerGui = localPlayer:WaitForChild("PlayerGui")
+local touchGui = playerGui:FindFirstChild("TouchGui")
+
+if not touchGui or not touchGui.Enabled then
+    return
 end
 
 local players = game:GetService("Players")
@@ -9,14 +19,18 @@ local runSvc = game:GetService("RunService")
 local inputSvc = game:GetService("UserInputService")
 local stats = game:GetService("Stats")
 
-if not inputSvc.TouchEnabled then
+local touchCheck = inputSvc.TouchEnabled
+if not touchCheck then
     return
 end
 
 local scriptKey = "CustomMobControls"
-
-if getgenv()[scriptKey] then return end
-getgenv()[scriptKey] = true
+local env = getgenv()
+local isLoadedKey = env[scriptKey]
+if isLoadedKey then
+    return
+end
+env[scriptKey] = true
 
 local baseCoyote = 0.22
 local baseBuffer = 0.28
@@ -38,83 +52,221 @@ local sysEnabled = true
 local captureAnim = false
 
 local function getPing()
-    local pingStr = stats.Network.ServerStatsItem["Data Ping"]:GetValueString()
+    local net = stats.Network
+    local ssi = net.ServerStatsItem
+    local dp = ssi["Data Ping"]
+    local pingStr = dp:GetValueString()
     local num = pingStr:match("%d+%.?%d*")
-    return tonumber(num) or 0
+    local result = tonumber(num)
+    if result then
+        return result
+    end
+    return 0
 end
 
 local function getHum()
     local c = player.Character
-    if c then return c:FindFirstChildOfClass("Humanoid") end
+    if c then
+        local h = c:FindFirstChildOfClass("Humanoid")
+        return h
+    end
     return nil
 end
 
-if player.PlayerGui:FindFirstChild("BlackDynamicJoystick") then
-    player.PlayerGui.BlackDynamicJoystick:Destroy()
+local coreGui = game:GetService("CoreGui")
+local pGui = player:WaitForChild("PlayerGui")
+
+local oldGui1 = coreGui:FindFirstChild("TouchGuiV2")
+if oldGui1 then
+    oldGui1:Destroy()
 end
 
-if player.PlayerGui:FindFirstChild("BlackDynamicJoystickCapture") then
-    player.PlayerGui.BlackDynamicJoystickCapture:Destroy()
+local oldGui2 = pGui:FindFirstChild("JoystickCaptureYeBro")
+if oldGui2 then
+    oldGui2:Destroy()
 end
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "BlackDynamicJoystick"
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.Name = "TouchGuiV2"
+gui.Parent = coreGui
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 gui.DisplayOrder = 99999
 gui.Enabled = true
+gui.IgnoreGuiInset = false
+gui.ClipToDeviceSafeArea = false
+gui.SafeAreaCompatibility = Enum.SafeAreaCompatibility.FullscreenExtension
 
 local capGui = Instance.new("ScreenGui")
-capGui.Name = "BlackDynamicJoystickCapture"
-capGui.Parent = player:WaitForChild("PlayerGui")
+capGui.Name = "JoystickCaptureYeBro"
+capGui.Parent = pGui
 capGui.ResetOnSpawn = false
-gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+capGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 capGui.DisplayOrder = -99999
-capGui.IgnoreGuiInset = false
 capGui.Enabled = sysEnabled
+capGui.IgnoreGuiInset = false
+capGui.ClipToDeviceSafeArea = false
+capGui.SafeAreaCompatibility = Enum.SafeAreaCompatibility.FullscreenExtension
 
-local capArea = Instance.new("Frame", capGui)
+local capArea = Instance.new("Frame")
 capArea.Name = "CaptureArea"
+capArea.Parent = capGui
 capArea.Size = UDim2.new(0.5, 0, 1, 0)
 capArea.Position = UDim2.new(0, 0, 0, 0)
 capArea.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 capArea.BackgroundTransparency = 1
 capArea.Active = true
 capArea.ZIndex = 1
+capArea.Selectable = false
+capArea.Rotation = 0
+capArea.BorderSizePixel = 0
 
-local stickBase = Instance.new("ImageLabel", gui)
+local stickBase = Instance.new("ImageLabel")
 stickBase.Name = "CustomBase"
+stickBase.Parent = gui
 stickBase.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 stickBase.BackgroundTransparency = 0.85
 stickBase.Size = UDim2.new(0, 40, 0, 40)
 stickBase.Visible = false
 stickBase.ZIndex = 99991
-Instance.new("UICorner", stickBase).CornerRadius = UDim.new(1, 0)
+stickBase.Active = false
+stickBase.Selectable = false
+stickBase.Rotation = 0
+stickBase.BorderSizePixel = 0
+local ucBase = Instance.new("UICorner")
+ucBase.CornerRadius = UDim.new(1, 0)
+ucBase.Parent = stickBase
 
 local dots = {}
-for i = 1, 6 do
-    local dt = Instance.new("ImageLabel", gui)
-    dt.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    dt.BackgroundTransparency = 0.95 - (i * 0.05)
-    dt.Size = UDim2.new(0, 6 + (i * 2), 0, 6 + (i * 2))
-    dt.Visible = false
-    dt.ZIndex = 99991
-    Instance.new("UICorner", dt).CornerRadius = UDim.new(1, 0)
-    table.insert(dots, dt)
-end
 
-local stick = Instance.new("ImageButton", gui)
+local dt1 = Instance.new("ImageLabel")
+dt1.Name = "Dot1"
+dt1.Parent = gui
+dt1.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+dt1.BackgroundTransparency = 0.90
+dt1.Size = UDim2.new(0, 8, 0, 8)
+dt1.Position = UDim2.new(0, 0, 0, 0)
+dt1.Visible = false
+dt1.ZIndex = 99991
+dt1.Active = false
+dt1.Selectable = false
+dt1.Rotation = 0
+dt1.BorderSizePixel = 0
+local uc1 = Instance.new("UICorner")
+uc1.CornerRadius = UDim.new(1, 0)
+uc1.Parent = dt1
+table.insert(dots, dt1)
+
+local dt2 = Instance.new("ImageLabel")
+dt2.Name = "Dot2"
+dt2.Parent = gui
+dt2.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+dt2.BackgroundTransparency = 0.85
+dt2.Size = UDim2.new(0, 10, 0, 10)
+dt2.Position = UDim2.new(0, 0, 0, 0)
+dt2.Visible = false
+dt2.ZIndex = 99991
+dt2.Active = false
+dt2.Selectable = false
+dt2.Rotation = 0
+dt2.BorderSizePixel = 0
+local uc2 = Instance.new("UICorner")
+uc2.CornerRadius = UDim.new(1, 0)
+uc2.Parent = dt2
+table.insert(dots, dt2)
+
+local dt3 = Instance.new("ImageLabel")
+dt3.Name = "Dot3"
+dt3.Parent = gui
+dt3.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+dt3.BackgroundTransparency = 0.80
+dt3.Size = UDim2.new(0, 12, 0, 12)
+dt3.Position = UDim2.new(0, 0, 0, 0)
+dt3.Visible = false
+dt3.ZIndex = 99991
+dt3.Active = false
+dt3.Selectable = false
+dt3.Rotation = 0
+dt3.BorderSizePixel = 0
+local uc3 = Instance.new("UICorner")
+uc3.CornerRadius = UDim.new(1, 0)
+uc3.Parent = dt3
+table.insert(dots, dt3)
+
+local dt4 = Instance.new("ImageLabel")
+dt4.Name = "Dot4"
+dt4.Parent = gui
+dt4.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+dt4.BackgroundTransparency = 0.75
+dt4.Size = UDim2.new(0, 14, 0, 14)
+dt4.Position = UDim2.new(0, 0, 0, 0)
+dt4.Visible = false
+dt4.ZIndex = 99991
+dt4.Active = false
+dt4.Selectable = false
+dt4.Rotation = 0
+dt4.BorderSizePixel = 0
+local uc4 = Instance.new("UICorner")
+uc4.CornerRadius = UDim.new(1, 0)
+uc4.Parent = dt4
+table.insert(dots, dt4)
+
+local dt5 = Instance.new("ImageLabel")
+dt5.Name = "Dot5"
+dt5.Parent = gui
+dt5.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+dt5.BackgroundTransparency = 0.70
+dt5.Size = UDim2.new(0, 16, 0, 16)
+dt5.Position = UDim2.new(0, 0, 0, 0)
+dt5.Visible = false
+dt5.ZIndex = 99991
+dt5.Active = false
+dt5.Selectable = false
+dt5.Rotation = 0
+dt5.BorderSizePixel = 0
+local uc5 = Instance.new("UICorner")
+uc5.CornerRadius = UDim.new(1, 0)
+uc5.Parent = dt5
+table.insert(dots, dt5)
+
+local dt6 = Instance.new("ImageLabel")
+dt6.Name = "Dot6"
+dt6.Parent = gui
+dt6.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+dt6.BackgroundTransparency = 0.65
+dt6.Size = UDim2.new(0, 18, 0, 18)
+dt6.Position = UDim2.new(0, 0, 0, 0)
+dt6.Visible = false
+dt6.ZIndex = 99991
+dt6.Active = false
+dt6.Selectable = false
+dt6.Rotation = 0
+dt6.BorderSizePixel = 0
+local uc6 = Instance.new("UICorner")
+uc6.CornerRadius = UDim.new(1, 0)
+uc6.Parent = dt6
+table.insert(dots, dt6)
+
+local stick = Instance.new("ImageButton")
 stick.Name = "CustomStick"
+stick.Parent = gui
 stick.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 stick.BackgroundTransparency = 0.5
 stick.Size = UDim2.new(0, 45, 0, 45)
 stick.Visible = false
 stick.ZIndex = 99992
-Instance.new("UICorner", stick).CornerRadius = UDim.new(1, 0)
+stick.Active = false
+stick.Selectable = false
+stick.Rotation = 0
+stick.BorderSizePixel = 0
+stick.AutoButtonColor = false
+local ucStick = Instance.new("UICorner")
+ucStick.CornerRadius = UDim.new(1, 0)
+ucStick.Parent = stick
 
-local jumpBtn = Instance.new("ImageButton", gui)
+local jumpBtn = Instance.new("ImageButton")
 jumpBtn.Name = "CustomJumpButton"
+jumpBtn.Parent = gui
 jumpBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 jumpBtn.BackgroundTransparency = 1
 jumpBtn.Position = UDim2.new(1, -95, 1, -95)
@@ -122,6 +274,11 @@ jumpBtn.Size = UDim2.new(0, 70, 0, 70)
 jumpBtn.ZIndex = 99992
 jumpBtn.Image = "rbxassetid://120976481677763"
 jumpBtn.AutoButtonColor = false
+jumpBtn.Active = true
+jumpBtn.Selectable = false
+jumpBtn.Rotation = 0
+jumpBtn.BorderSizePixel = 0
+jumpBtn.Visible = true
 
 local isDrag = false
 local dragInput = nil
@@ -135,106 +292,136 @@ local function resetJoystick()
     dragInput = nil
     stickBase.Visible = false
     stick.Visible = false
-    for _, d in pairs(dots) do d.Visible = false end
+    local d1 = dots[1]
+    local d2 = dots[2]
+    local d3 = dots[3]
+    local d4 = dots[4]
+    local d5 = dots[5]
+    local d6 = dots[6]
+    d1.Visible = false
+    d2.Visible = false
+    d3.Visible = false
+    d4.Visible = false
+    d5.Visible = false
+    d6.Visible = false
     moveVec = Vector3.new(0, 0, 0)
-end
-
-local function enableCustomUI()
-    sysEnabled = true
-    capGui.Enabled = true
-    jumpBtn.Visible = true
-    pcall(function()
-        local tGui = player.PlayerGui:FindFirstChild("TouchGui")
-        if tGui then tGui.Enabled = false end
-    end)
-end
-
-local function disableCustomUI()
-    sysEnabled = false
-    capGui.Enabled = false
-    jumpBtn.Visible = true
-    resetJoystick()
-    pcall(function()
-        local tGui = player.PlayerGui:FindFirstChild("TouchGui")
-        if tGui then
-            tGui.Enabled = true
-            local frm = tGui:FindFirstChild("TouchControlFrame")
-            if frm then
-                frm.Visible = true
-                local stk = frm:FindFirstChild("DynamicThumbstick")
-                if stk then stk.Visible = true end
-            end
-        end
-    end)
 end
 
 local function clearConns()
     for _, c in ipairs(charConns) do
-        if c and c.Connected then c:Disconnect() end
+        local checkC = c
+        if checkC then
+            local isConn = checkC.Connected
+            if isConn then
+                checkC:Disconnect()
+            end
+        end
     end
     charConns = {}
 end
 
-local function isVehicleSeat()
-    local hum = getHum()
-    if not hum then return false end
-    if hum.Sit then
-        local sp = hum.SeatPart
-        if sp and sp:IsA("VehicleSeat") then
-            return true
+task.spawn(function()
+    local gotJoy = false
+    local gotJump = false
+    local currentJumpBtn = nil
+    
+    while true do
+        task.wait(0.1)
+        local tGuiCheck = pGui:FindFirstChild("TouchGui")
+        if tGuiCheck then
+            local tcf = tGuiCheck:FindFirstChild("TouchControlFrame")
+            if tcf then
+                local jBtnDefault = tcf:FindFirstChild("JumpButton")
+                if jBtnDefault then
+                    if not gotJump then
+                        local jpos = jBtnDefault.Position
+                        local jsz = jBtnDefault.Size
+                        jumpBtn.Position = jpos
+                        jumpBtn.Size = jsz
+                        gotJump = true
+                    end
+                    
+                    if currentJumpBtn ~= jBtnDefault then
+                        currentJumpBtn = jBtnDefault
+                        currentJumpBtn.ImageTransparency = 1
+                        currentJumpBtn:GetPropertyChangedSignal("ImageTransparency"):Connect(function()
+                            if currentJumpBtn.ImageTransparency ~= 1 then
+                                currentJumpBtn.ImageTransparency = 1
+                            end
+                        end)
+                    end
+                end
+
+                local dFrame = tcf:FindFirstChild("DynamicThumbstickFrame")
+                local sThumb = tcf:FindFirstChild("DynamicThumbstick")
+                local joyUI = nil
+
+                if dFrame then
+                    joyUI = dFrame
+                elseif sThumb then
+                    joyUI = sThumb
+                end
+
+                if joyUI then
+                    if not gotJoy then
+                        local jpos2 = joyUI.Position
+                        local jsz2 = joyUI.Size
+                        capArea.Position = jpos2
+                        capArea.Size = jsz2
+                        gotJoy = true
+                    end
+                    joyUI:Destroy()
+                end
+            end
         end
     end
-    return false
-end
+end)
 
-local function updateSeatState()
-    local hum = getHum()
-    if not hum then return end
-    if hum.Sit and isVehicleSeat() then
-        disableCustomUI()
-    else
-        enableCustomUI()
+local ControlModule = player:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"):WaitForChild("ControlModule")
+local VehicleController = require(ControlModule:WaitForChild("VehicleController"))
+local originalUpdate = VehicleController.Update
+local isHooked = false
+local activeVehicleSeat = nil
+
+local function hookVehicleController()
+    if isHooked then
+        return
+    end
+    isHooked = true
+    VehicleController.Update = function(self, p31, p32, p33)
+        local mv, iv = originalUpdate(self, p31, p32, p33)
+        local vs = self.vehicleSeat
+        if vs then
+            activeVehicleSeat = vs
+            local thr = 0
+            local mz = moveVec.Z
+            if mz < -0.1 then
+                thr = 1
+            elseif mz > 0.1 then
+                thr = -1
+            end
+
+            local mx = moveVec.X
+            local str = math.clamp(mx, -1, 1)
+
+            vs.ThrottleFloat = thr
+            vs.SteerFloat = str
+        end
+        return mv, iv
     end
 end
 
-local function getTouchFrame()
-    local tGui = player.PlayerGui:FindFirstChild("TouchGui")
-    if not tGui then return nil end
-    return tGui:FindFirstChild("TouchControlFrame")
-end
-
-local function getThumbstick(frm)
-    if not frm then return nil end
-    local dthm = frm:FindFirstChild("DynamicThumbstickFrame")
-    if dthm then return dthm end
-    local stk = frm:FindFirstChild("DynamicThumbstick")
-    if stk then
-        local p = stk.Parent
-        if p and p ~= frm then return p end
-        return stk
+local function unhookVehicleController()
+    if not isHooked then
+        return
     end
-    return nil
-end
-
-local function getRobloxJump(frm)
-    if not frm then return nil end
-    return frm:FindFirstChild("JumpButton")
-end
-
-local function syncUI()
-    local frm = getTouchFrame()
-    if not frm then return end
-
-    local dthm = getThumbstick(frm)
-    if dthm then
-        capArea.Size = dthm.Size
-        capArea.Position = dthm.Position
-    end
-
-    local rJump = getRobloxJump(frm)
-    if rJump then
-        jumpBtn.Position = rJump.Position
-        jumpBtn.Size = rJump.Size
+    isHooked = false
+    VehicleController.Update = originalUpdate
+    local vs = activeVehicleSeat
+    if vs then
+        vs.ThrottleFloat = 0
+        vs.SteerFloat = 0
+        activeVehicleSeat = nil
     end
 end
 
@@ -243,58 +430,88 @@ local function setupCharacter(c)
     lastGrounded = 0
     lastJumpPress = 0
     lastJumpReq = 0
-    isHoldingJump = false
     isSwim = false
 
     local hum = c:WaitForChild("Humanoid", 5)
-    if not hum then return end
-
-    updateSeatState()
+    if not hum then
+        return
+    end
 
     local seatConn = hum:GetPropertyChangedSignal("Sit"):Connect(function()
         local h = getHum()
-        if not h then return end
-        if h.Sit and isVehicleSeat() then
-            disableCustomUI()
+        if not h then
+            return
+        end
+        local isSit = h.Sit
+        if isSit then
+            hookVehicleController()
         else
-            enableCustomUI()
-            if isDrag and hasMoved then
-                stickBase.Visible = true
-                stick.Visible = true
-                for _, d in pairs(dots) do d.Visible = true end
-            end
+            unhookVehicleController()
         end
     end)
     table.insert(charConns, seatConn)
 
+    local initialSit = hum.Sit
+    if initialSit then
+        hookVehicleController()
+    end
+
     local function handleLand()
-        if tick() - lastJumpPress <= bufferTime then
+        local diff = tick() - lastJumpPress
+        if diff <= bufferTime then
             lastJumpPress = 0
             task.defer(function()
-                if hum and hum:GetState() ~= Enum.HumanoidStateType.Jumping then
-                    lastJumpReq = tick()
-                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                if hum then
+                    local hs = hum:GetState()
+                    local hj = Enum.HumanoidStateType.Jumping
+                    if hs ~= hj then
+                        lastJumpReq = tick()
+                        hum:ChangeState(hj)
+                    end
                 end
             end)
         end
     end
 
     local stateConn = hum.StateChanged:Connect(function(old, new)
-        isSwim = (new == Enum.HumanoidStateType.Swimming)
-        if new == Enum.HumanoidStateType.Freefall then
-            if tick() - lastJumpReq > 0.25 then
+        local sw = Enum.HumanoidStateType.Swimming
+        if new == sw then
+            isSwim = true
+        else
+            isSwim = false
+        end
+
+        local ff = Enum.HumanoidStateType.Freefall
+        if new == ff then
+            local tDiff = tick() - lastJumpReq
+            if tDiff > 0.25 then
                 lastGrounded = tick()
             end
         end
-        if new == Enum.HumanoidStateType.Landed or new == Enum.HumanoidStateType.Running or new == Enum.HumanoidStateType.RunningNoPhysics then
+
+        local ld = Enum.HumanoidStateType.Landed
+        if new == ld then
+            handleLand()
+        end
+
+        local rn = Enum.HumanoidStateType.Running
+        if new == rn then
+            handleLand()
+        end
+
+        local rnp = Enum.HumanoidStateType.RunningNoPhysics
+        if new == rnp then
             handleLand()
         end
     end)
     table.insert(charConns, stateConn)
 
     local floorConn = hum:GetPropertyChangedSignal("FloorMaterial"):Connect(function()
-        if hum.FloorMaterial == Enum.Material.Air then
-            if tick() - lastJumpReq > 0.25 then
+        local fm = hum.FloorMaterial
+        local am = Enum.Material.Air
+        if fm == am then
+            local tDiff2 = tick() - lastJumpReq
+            if tDiff2 > 0.25 then
                 lastGrounded = tick()
             end
         else
@@ -302,101 +519,39 @@ local function setupCharacter(c)
         end
     end)
     table.insert(charConns, floorConn)
-
-    task.spawn(function()
-        local attempts = 0
-        while attempts < 30 do
-            if player.Character ~= c then break end
-            local found = false
-            pcall(function()
-                local tGui = player.PlayerGui:FindFirstChild("TouchGui")
-                if tGui then
-                    local frm = tGui:FindFirstChild("TouchControlFrame")
-                    if frm then
-                        local dthm = getThumbstick(frm)
-                        if dthm then
-                            table.insert(charConns, dthm:GetPropertyChangedSignal("Position"):Connect(syncUI))
-                            table.insert(charConns, dthm:GetPropertyChangedSignal("Size"):Connect(syncUI))
-                        end
-                        local rJump = getRobloxJump(frm)
-                        if rJump then
-                            table.insert(charConns, rJump:GetPropertyChangedSignal("Position"):Connect(syncUI))
-                            table.insert(charConns, rJump:GetPropertyChangedSignal("Size"):Connect(syncUI))
-                            table.insert(charConns, rJump:GetPropertyChangedSignal("Visible"):Connect(function()
-                                if rJump.Visible then rJump.Visible = false end
-                            end))
-                            rJump.Visible = false
-                        end
-
-                        local stk = frm:FindFirstChild("DynamicThumbstick")
-                        if stk then
-                            table.insert(charConns, stk:GetPropertyChangedSignal("Visible"):Connect(function()
-                                if not sysEnabled and not stk.Visible then
-                                    stk.Visible = true
-                                end
-                            end))
-                        end
-
-                        table.insert(charConns, tGui:GetPropertyChangedSignal("Enabled"):Connect(function()
-                            if sysEnabled and tGui.Enabled then
-                                tGui.Enabled = false
-                            elseif not sysEnabled and not tGui.Enabled then
-                                tGui.Enabled = true
-                            end
-                        end))
-                        tGui.Enabled = not sysEnabled
-
-                        syncUI()
-                        found = true
-                    end
-                end
-            end)
-            if found then break end
-            attempts += 1
-            task.wait(0.2)
-        end
-    end)
-
-    task.spawn(function()
-        while true do
-            task.wait(0.2)
-            if player.Character ~= c then break end
-            local h = c:FindFirstChildOfClass("Humanoid")
-            if h then
-                if h.Sit and isVehicleSeat() then
-                    if sysEnabled then
-                        disableCustomUI()
-                    end
-                else
-                    if not sysEnabled then
-                        enableCustomUI()
-                    end
-                end
-            end
-        end
-    end)
 end
 
 local function ensureUI()
-    if not gui or not gui.Parent then return end
-    gui.Enabled = true
+    local gCheck = gui
+    if not gCheck then
+        return
+    end
+    local gp = gCheck.Parent
+    if not gp then
+        return
+    end
+    gCheck.Enabled = true
     capGui.Enabled = sysEnabled
     jumpBtn.Visible = true
 end
 
 task.spawn(function()
-    local pMod = require(player:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"))
+    local pScripts = player:WaitForChild("PlayerScripts")
+    local pMod = require(pScripts:WaitForChild("PlayerModule"))
     local ctrl = pMod:GetControls()
     local ogMove = ctrl.GetMoveVector
 
     ctrl.GetMoveVector = function(self, ...)
-        if sysEnabled then return moveVec end
+        if sysEnabled then
+            return moveVec
+        end
         return ogMove(self, ...)
     end
 end)
 
-if player.Character then
-    setupCharacter(player.Character)
+local cCheck = player.Character
+if cCheck then
+    setupCharacter(cCheck)
 end
 
 player.CharacterAdded:Connect(function(c)
@@ -413,80 +568,50 @@ player.CharacterAdded:Connect(function(c)
     ensureUI()
 end)
 
-runSvc.RenderStepped:Connect(function()
-    if sysEnabled then
-        syncUI()
-        local c = player.Character
-        if c then
-            local h = c:FindFirstChild("Humanoid")
-            if h then
-                if isSwim and isHoldingJump then
-                    h.Jump = true
-                end
-                h:Move(moveVec, true)
-            end
-        end
-    end
-end)
-
-task.spawn(function()
-    if sysEnabled then ensureUI() end
-end)
-
-task.spawn(function()
-    task.wait(0.1)
-    captureAnim = true
-    capArea.BackgroundTransparency = 0.5
-    local elap = 0
-    while elap < 1.5 do
-        if not captureAnim then
-            capArea.BackgroundTransparency = 1
-            return
-        end
-        elap += task.wait()
-    end
-    if not captureAnim then
-        capArea.BackgroundTransparency = 1
-        return
-    end
-    local fElap = 0
-    while fElap < 0.6 do
-        if not captureAnim then
-            capArea.BackgroundTransparency = 1
-            return
-        end
-        fElap += task.wait()
-        capArea.BackgroundTransparency = 0.5 + (0.5 * math.clamp(fElap / 0.6, 0, 1))
-    end
-    capArea.BackgroundTransparency = 1
-    captureAnim = false
-end)
-
 local function reqJump()
     local hum = getHum()
-    if not hum then return end
+    if not hum then
+        return
+    end
 
     if isSwim then
         hum.Jump = true
         return
     end
 
-    if hum.Sit then
+    local sitCheck = hum.Sit
+    if sitCheck then
         hum.Sit = false
         hum.Jump = true
         lastJumpReq = tick()
         task.defer(function()
-            if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+            if hum then
+                local hj = Enum.HumanoidStateType.Jumping
+                hum:ChangeState(hj)
+            end
         end)
         return
     end
 
     local t = tick()
     local state = hum:GetState()
-    local inAir = (hum.FloorMaterial == Enum.Material.Air)
-    local canCoyote = (t - lastGrounded <= coyoteTime) and (lastGrounded > 0)
+    local fm = hum.FloorMaterial
+    local am = Enum.Material.Air
+    local inAir = false
+    if fm == am then
+        inAir = true
+    end
 
-    if state == Enum.HumanoidStateType.Climbing then
+    local diffT = t - lastGrounded
+    local canCoyote = false
+    if diffT <= coyoteTime then
+        if lastGrounded > 0 then
+            canCoyote = true
+        end
+    end
+
+    local clmb = Enum.HumanoidStateType.Climbing
+    if state == clmb then
         hum:ChangeState(Enum.HumanoidStateType.Jumping)
         return
     end
@@ -513,9 +638,17 @@ jumpBtn.MouseButton1Down:Connect(function()
         while isHoldingJump do
             local hum = getHum()
             if not isSwim then
-                if hum and hum.FloorMaterial ~= Enum.Material.Air and not hum.Sit then
-                    lastJumpReq = tick()
-                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                if hum then
+                    local fm = hum.FloorMaterial
+                    local am = Enum.Material.Air
+                    local sitCheck = hum.Sit
+                    if fm ~= am then
+                        if not sitCheck then
+                            lastJumpReq = tick()
+                            local hj = Enum.HumanoidStateType.Jumping
+                            hum:ChangeState(hj)
+                        end
+                    end
                 end
             end
             task.wait(0.05)
@@ -534,22 +667,87 @@ jumpBtn.MouseLeave:Connect(function()
 end)
 
 local function updateJoyVisual(cpos, df)
-    stick.Position = UDim2.new(0, cpos.X - 22.5, 0, cpos.Y - 22.5)
-    for i, dt in ipairs(dots) do
-        local rt = i / 7
-        local dpos = startPos + (df * rt)
-        dt.Position = UDim2.new(0, dpos.X - (dt.Size.X.Offset / 2), 0, dpos.Y - (dt.Size.Y.Offset / 2))
-    end
+    local sx = cpos.X - 22.5
+    local sy = cpos.Y - 22.5
+    stick.Position = UDim2.new(0, sx, 0, sy)
+
+    local d1 = dots[1]
+    local rt1 = 1 / 7
+    local dpos1 = startPos + (df * rt1)
+    local ox1 = dpos1.X - (d1.Size.X.Offset / 2)
+    local oy1 = dpos1.Y - (d1.Size.Y.Offset / 2)
+    d1.Position = UDim2.new(0, ox1, 0, oy1)
+
+    local d2 = dots[2]
+    local rt2 = 2 / 7
+    local dpos2 = startPos + (df * rt2)
+    local ox2 = dpos2.X - (d2.Size.X.Offset / 2)
+    local oy2 = dpos2.Y - (d2.Size.Y.Offset / 2)
+    d2.Position = UDim2.new(0, ox2, 0, oy2)
+
+    local d3 = dots[3]
+    local rt3 = 3 / 7
+    local dpos3 = startPos + (df * rt3)
+    local ox3 = dpos3.X - (d3.Size.X.Offset / 2)
+    local oy3 = dpos3.Y - (d3.Size.Y.Offset / 2)
+    d3.Position = UDim2.new(0, ox3, 0, oy3)
+
+    local d4 = dots[4]
+    local rt4 = 4 / 7
+    local dpos4 = startPos + (df * rt4)
+    local ox4 = dpos4.X - (d4.Size.X.Offset / 2)
+    local oy4 = dpos4.Y - (d4.Size.Y.Offset / 2)
+    d4.Position = UDim2.new(0, ox4, 0, oy4)
+
+    local d5 = dots[5]
+    local rt5 = 5 / 7
+    local dpos5 = startPos + (df * rt5)
+    local ox5 = dpos5.X - (d5.Size.X.Offset / 2)
+    local oy5 = dpos5.Y - (d5.Size.Y.Offset / 2)
+    d5.Position = UDim2.new(0, ox5, 0, oy5)
+
+    local d6 = dots[6]
+    local rt6 = 6 / 7
+    local dpos6 = startPos + (df * rt6)
+    local ox6 = dpos6.X - (d6.Size.X.Offset / 2)
+    local oy6 = dpos6.Y - (d6.Size.Y.Offset / 2)
+    d6.Position = UDim2.new(0, ox6, 0, oy6)
 
     local dist = df.Magnitude
-    local dir = dist > 0 and df.Unit or Vector2.new(0, 0)
-    local intens = math.clamp(dist / 40, 0, 1)
-    moveVec = Vector3.new(dir.X * intens, 0, dir.Y * intens)
+    local dir = Vector2.new(0, 0)
+    if dist > 0 then
+        dir = df.Unit
+    end
+
+    local intens = dist / 40
+    local clampIntens = math.clamp(intens, 0, 1)
+
+    local vecX = dir.X * clampIntens
+    local vecY = 0
+    local vecZ = dir.Y * clampIntens
+
+    local finalVec = Vector3.new(vecX, vecY, vecZ)
+    moveVec = finalVec
 end
 
 capArea.InputBegan:Connect(function(inp)
-    if not sysEnabled or isDrag then return end
-    if inp.UserInputType ~= Enum.UserInputType.Touch and inp.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+    local en = sysEnabled
+    if not en then
+        return
+    end
+    if isDrag then
+        return
+    end
+
+    local t1 = Enum.UserInputType.Touch
+    local t2 = Enum.UserInputType.MouseButton1
+    local it = inp.UserInputType
+
+    if it ~= t1 then
+        if it ~= t2 then
+            return
+        end
+    end
 
     if captureAnim then
         captureAnim = false
@@ -559,27 +757,63 @@ capArea.InputBegan:Connect(function(inp)
     isDrag = true
     hasMoved = false
     dragInput = inp
-    startPos = Vector2.new(inp.Position.X, inp.Position.Y)
+
+    local px = inp.Position.X
+    local py = inp.Position.Y
+    local sp = Vector2.new(px, py)
+    startPos = sp
 end)
 
 inputSvc.InputChanged:Connect(function(inp)
-    if sysEnabled and isDrag and inp == dragInput then
-        local cpos = Vector2.new(inp.Position.X, inp.Position.Y)
-        local df = cpos - startPos
+    local en = sysEnabled
+    if not en then
+        return
+    end
+    if not isDrag then
+        return
+    end
+    if inp ~= dragInput then
+        return
+    end
 
-        if not hasMoved and df.Magnitude > 10 then
+    local px = inp.Position.X
+    local py = inp.Position.Y
+    local cpos = Vector2.new(px, py)
+    local df = cpos - startPos
+    local dist = df.Magnitude
+
+    if not hasMoved then
+        if dist > 10 then
             hasMoved = true
-            stickBase.Position = UDim2.new(0, startPos.X - 20, 0, startPos.Y - 20)
+            local bx = startPos.X - 20
+            local by = startPos.Y - 20
+            stickBase.Position = UDim2.new(0, bx, 0, by)
             stickBase.Visible = true
             stick.Visible = true
-            for _, d in pairs(dots) do d.Visible = true end
+            local d1 = dots[1]
+            local d2 = dots[2]
+            local d3 = dots[3]
+            local d4 = dots[4]
+            local d5 = dots[5]
+            local d6 = dots[6]
+            d1.Visible = true
+            d2.Visible = true
+            d3.Visible = true
+            d4.Visible = true
+            d5.Visible = true
+            d6.Visible = true
         end
-        if hasMoved then updateJoyVisual(cpos, df) end
+    end
+
+    if hasMoved then
+        updateJoyVisual(cpos, df)
     end
 end)
 
 inputSvc.InputEnded:Connect(function(inp)
-    if inp == dragInput then resetJoystick() end
+    if inp == dragInput then
+        resetJoystick()
+    end
 end)
 
 inputSvc.WindowFocusReleased:Connect(function()
@@ -592,17 +826,96 @@ runSvc.Stepped:Connect(function()
     local curPing = getPing()
 
     table.insert(pingHist, curPing)
-    if #pingHist > maxPing then
+    local phc = #pingHist
+    if phc > maxPing then
         table.remove(pingHist, 1)
     end
 
     local pSum = 0
-    for _, v in ipairs(pingHist) do pSum += v end
-    local avgPing = pSum / #pingHist
+    for _, v in ipairs(pingHist) do
+        pSum = pSum + v
+    end
 
-    smoothPing = smoothPing + (avgPing - smoothPing) * 0.1
+    local pLen = #pingHist
+    local avgPing = pSum / pLen
+
+    local pDiff = avgPing - smoothPing
+    local pMod = pDiff * 0.1
+    smoothPing = smoothPing + pMod
 
     local pSec = smoothPing / 1000
-    coyoteTime = baseCoyote + (pSec * 1.2)
-    bufferTime = baseBuffer + (pSec * 1.5)
+    local cMod = pSec * 1.2
+    local bMod = pSec * 1.5
+
+    coyoteTime = baseCoyote + cMod
+    bufferTime = baseBuffer + bMod
+end)
+
+runSvc.RenderStepped:Connect(function()
+    local en = sysEnabled
+    if en then
+        local c = player.Character
+        if c then
+            local h = c:FindFirstChild("Humanoid")
+            if h then
+                if isSwim then
+                    if isHoldingJump then
+                        h.Jump = true
+                    end
+                end
+                h:Move(moveVec, true)
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    local en = sysEnabled
+    if en then
+        ensureUI()
+    end
+end)
+
+task.spawn(function()
+    task.wait(0.1)
+    captureAnim = true
+    capArea.BackgroundTransparency = 0.5
+    local elap = 0
+    while true do
+        if elap >= 1.5 then
+            break
+        end
+        if not captureAnim then
+            capArea.BackgroundTransparency = 1
+            return
+        end
+        local wt = task.wait()
+        elap = elap + wt
+    end
+
+    if not captureAnim then
+        capArea.BackgroundTransparency = 1
+        return
+    end
+
+    local fElap = 0
+    while true do
+        if fElap >= 0.6 then
+            break
+        end
+        if not captureAnim then
+            capArea.BackgroundTransparency = 1
+            return
+        end
+        local wt2 = task.wait()
+        fElap = fElap + wt2
+
+        local ratio = fElap / 0.6
+        local clampRatio = math.clamp(ratio, 0, 1)
+        local transMod = 0.5 * clampRatio
+        local finalTrans = 0.5 + transMod
+        capArea.BackgroundTransparency = finalTrans
+    end
+    capArea.BackgroundTransparency = 1
+    captureAnim = false
 end)
